@@ -11,87 +11,207 @@ export class FoodBox {
     }
 
     build() {
-        const kraftTexture = TextureGenerator.createKraftTexture();
-        const labelTexture = TextureGenerator.createFoodLabel();
+        const kraftTexture = TextureGenerator.createKraftTexture(1024, 1024, '#CBB08C');
+        const sleeveLabel = TextureGenerator.createFoodLabel();
 
         // 1. Inner Drawer Tray
+        this.tray = new THREE.Group();
+
         const trayMat = new THREE.MeshPhysicalMaterial({
             map: kraftTexture,
-            roughness: 0.85,
-            metalness: 0.05,
+            roughness: 0.75,
+            metalness: 0.04,
             clearcoat: 0.05
         });
-        const trayGeo = new THREE.BoxGeometry(2.4, 0.9, 3.4);
-        this.tray = new THREE.Mesh(trayGeo, trayMat);
-        this.tray.castShadow = true;
-        this.tray.receiveShadow = true;
+
+        const tw = 2.4, th = 0.85, td = 3.3, tthick = 0.035;
+
+        // Tray bottom
+        const trayBottom = new THREE.Mesh(new THREE.BoxGeometry(tw, tthick, td), trayMat);
+        trayBottom.position.y = tthick / 2;
+        trayBottom.receiveShadow = true;
+        this.tray.add(trayBottom);
+
+        // Tray sides (left, right, front, back)
+        const sideMat = trayMat;
+        const leftWall = new THREE.Mesh(new THREE.BoxGeometry(tthick, th, td), sideMat);
+        leftWall.position.set(-tw / 2 + tthick / 2, th / 2, 0);
+        this.tray.add(leftWall);
+
+        const rightWall = new THREE.Mesh(new THREE.BoxGeometry(tthick, th, td), sideMat);
+        rightWall.position.set(tw / 2 - tthick / 2, th / 2, 0);
+        this.tray.add(rightWall);
+
+        const backWall = new THREE.Mesh(new THREE.BoxGeometry(tw, th, tthick), sideMat);
+        backWall.position.set(0, th / 2, -td / 2 + tthick / 2);
+        this.tray.add(backWall);
+
+        const frontWall = new THREE.Mesh(new THREE.BoxGeometry(tw, th, tthick), sideMat);
+        frontWall.position.set(0, th / 2, td / 2 - tthick / 2);
+        this.tray.add(frontWall);
+
+        // Gold Satin Pull Ribbon Tab on front wall
+        const ribbonMat = new THREE.MeshStandardMaterial({
+            color: 0xE5C483,
+            roughness: 0.35,
+            metalness: 0.4
+        });
+        const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.04, 0.4), ribbonMat);
+        ribbon.position.set(0, th / 2, td / 2 + 0.18);
+        this.tray.add(ribbon);
+
+        // 2. Artisanal Chocolate Bars Inside Tray
+        this.contents = new THREE.Group();
+        const barW = 0.65, barH = 0.28, barD = 2.8;
+
+        const chocolates = [
+            { title: '72% DARK NOIR', sub: 'MADAGASCAR COCOA', color: '#883222' },
+            { title: 'PISTACHIO MATCHA', sub: 'ORGANIC INFUSION', color: '#44563F' },
+            { title: 'SALTED CARAMEL', sub: 'ALEXANDRIAN FLEUR', color: '#AA7436' }
+        ];
+
+        this.bars = [];
+        const goldFoilMat = new THREE.MeshStandardMaterial({
+            color: 0xF0D28F,
+            metalness: 0.85,
+            roughness: 0.25
+        });
+
+        chocolates.forEach((item, idx) => {
+            const barGroup = new THREE.Group();
+
+            // Inner Gold Foil Block
+            const foilBlock = new THREE.Mesh(new THREE.BoxGeometry(barW, barH, barD), goldFoilMat);
+            foilBlock.castShadow = true;
+            barGroup.add(foilBlock);
+
+            // Printed Paper Belly Band (Sleeve wrapper around the bar)
+            const wrapTex = TextureGenerator.createChocolateWrapTexture(item.title, item.sub, item.color);
+            const bandMat = new THREE.MeshStandardMaterial({
+                map: wrapTex,
+                roughness: 0.55
+            });
+            const band = new THREE.Mesh(new THREE.BoxGeometry(barW + 0.015, barH + 0.015, barD * 0.72), bandMat);
+            barGroup.add(band);
+
+            // Spacing inside the tray
+            barGroup.position.set(-0.75 + idx * 0.75, th / 2, 0);
+            this.contents.add(barGroup);
+            this.bars.push(barGroup);
+        });
+
+        this.tray.add(this.contents);
         this.group.add(this.tray);
 
-        // 2. Branded Food Contents Inside Tray (Tins / Tea Bars)
-        this.contents = new THREE.Group();
-        for (let i = 0; i < 3; i++) {
-            const tinMat = new THREE.MeshStandardMaterial({
-                color: i === 0 ? 0xE08B73 : (i === 1 ? 0x637A5D : 0xD4B28C),
-                roughness: 0.35,
-                metalness: 0.6
-            });
-            const tin = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.75, 32), tinMat);
-            tin.position.set(-0.65 + i * 0.65, 0.1, 0);
-            tin.castShadow = true;
-            this.contents.add(tin);
-        }
-        this.tray.add(this.contents);
+        // 3. Hollow Outer Sleeve with Botanical Branding
+        this.sleeve = new THREE.Group();
+        const sw = tw + 0.08, sh = th + 0.08, sd = td + 0.02, sthick = 0.035;
 
-        // 3. Outer Sleeve with Branded Label
-        const sleeveMat = new THREE.MeshPhysicalMaterial({
-            map: labelTexture,
+        const sleeveOuterMat = new THREE.MeshPhysicalMaterial({
+            map: sleeveLabel,
             roughness: 0.5,
-            metalness: 0.1,
-            clearcoat: 0.2
+            metalness: 0.08,
+            clearcoat: 0.25
         });
-        const sleeveGeo = new THREE.BoxGeometry(2.46, 0.96, 3.46);
-        this.sleeve = new THREE.Mesh(sleeveGeo, sleeveMat);
-        this.sleeve.castShadow = true;
-        this.sleeve.receiveShadow = true;
+
+        // Top panel
+        const sleeveTop = new THREE.Mesh(new THREE.BoxGeometry(sw, sthick, sd), sleeveOuterMat);
+        sleeveTop.position.y = sh;
+        sleeveTop.castShadow = true;
+        this.sleeve.add(sleeveTop);
+
+        // Bottom panel
+        const sleeveBottom = new THREE.Mesh(new THREE.BoxGeometry(sw, sthick, sd), sleeveOuterMat);
+        sleeveBottom.position.y = 0;
+        sleeveBottom.receiveShadow = true;
+        this.sleeve.add(sleeveBottom);
+
+        // Front face
+        const sleeveFront = new THREE.Mesh(new THREE.BoxGeometry(sw, sh, sthick), sleeveOuterMat);
+        sleeveFront.position.set(0, sh / 2, sd / 2 - sthick / 2);
+        sleeveFront.castShadow = true;
+        this.sleeve.add(sleeveFront);
+
+        // Back face
+        const sleeveBack = new THREE.Mesh(new THREE.BoxGeometry(sw, sh, sthick), sleeveOuterMat);
+        sleeveBack.position.set(0, sh / 2, -sd / 2 + sthick / 2);
+        sleeveBack.castShadow = true;
+        this.sleeve.add(sleeveBack);
+
+        // (Left and Right ends remain completely open for realistic sliding sleeve!)
         this.group.add(this.sleeve);
+
+        this.group.position.y = -0.4;
     }
 
     unbox(shouldOpen = true) {
         this.isUnboxed = shouldOpen;
+
         if (shouldOpen) {
             this.audio.playPaperSlide();
+
+            // Sleeve glides left
             gsap.to(this.sleeve.position, {
-                x: -3.2,
-                duration: 1.2,
+                x: -3.4,
+                duration: 1.3,
                 ease: 'power3.out'
             });
+
+            // Tray slides forward towards the camera
             gsap.to(this.tray.position, {
                 z: 1.8,
-                duration: 1.2,
+                duration: 1.3,
                 ease: 'power3.out',
                 onComplete: () => this.audio.playCardboardThud()
             });
-            gsap.to(this.contents.position, {
-                y: 0.4,
-                duration: 0.8,
-                delay: 0.4,
-                ease: 'back.out(1.8)'
+
+            // Chocolate bars elevate and tilt slightly to display their wrappers
+            this.bars.forEach((bar, idx) => {
+                gsap.to(bar.position, {
+                    y: 0.85,
+                    duration: 0.9,
+                    delay: 0.35 + idx * 0.12,
+                    ease: 'back.out(1.8)'
+                });
+                gsap.to(bar.rotation, {
+                    x: 0.28,
+                    duration: 0.9,
+                    delay: 0.35 + idx * 0.12,
+                    ease: 'power2.out'
+                });
             });
+
         } else {
             this.audio.playPaperSlide();
-            gsap.to(this.contents.position, {
-                y: 0,
-                duration: 0.6,
-                ease: 'power2.in'
+
+            // Lower chocolate bars
+            this.bars.forEach((bar, idx) => {
+                gsap.to(bar.position, {
+                    y: 0.42,
+                    duration: 0.6,
+                    delay: idx * 0.05,
+                    ease: 'power2.in'
+                });
+                gsap.to(bar.rotation, {
+                    x: 0,
+                    duration: 0.6,
+                    delay: idx * 0.05,
+                    ease: 'power2.in'
+                });
             });
-            gsap.to(this.sleeve.position, {
-                x: 0,
-                duration: 1.0,
-                ease: 'power3.inOut'
-            });
+
+            // Slide tray and sleeve back together
             gsap.to(this.tray.position, {
                 z: 0,
-                duration: 1.0,
+                duration: 1.1,
+                delay: 0.2,
+                ease: 'power3.inOut'
+            });
+
+            gsap.to(this.sleeve.position, {
+                x: 0,
+                duration: 1.1,
+                delay: 0.2,
                 ease: 'power3.inOut',
                 onComplete: () => this.audio.playCardboardThud()
             });

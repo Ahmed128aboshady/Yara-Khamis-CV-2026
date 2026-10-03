@@ -29,7 +29,7 @@ export class Studio {
 
         // Camera
         this.camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
-        this.camera.position.set(0, 3.8, 6.8);
+        this.camera.position.set(1.4, 2.6, 6.0);
 
         // Renderer with High Dynamic Range & Shadows
         this.renderer = new THREE.WebGLRenderer({
@@ -49,11 +49,13 @@ export class Studio {
         this.controls = new OrbitControls(this.camera, this.canvas);
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.05;
+        this.controls.target.set(0, 0.35, 0);
         this.controls.maxPolarAngle = Math.PI / 2 - 0.05;
-        this.controls.minDistance = 3.5;
+        this.controls.minDistance = 3.0;
         this.controls.maxDistance = 12;
         this.controls.autoRotate = true;
-        this.controls.autoRotateSpeed = 0.8;
+        this.controls.autoRotateSpeed = 0.6;
+        this.controls.update();
 
         // Lighting System
         this.lighting = new Lighting(this.scene);
@@ -90,16 +92,22 @@ export class Studio {
         // Animate current out, next in
         gsap.to(this.activePackage.group.scale, {
             x: 0.001, y: 0.001, z: 0.001,
-            duration: 0.4,
+            duration: 0.35,
             ease: 'power2.in',
             onComplete: () => {
+                if (this.activePackage && this.activePackage.isUnboxed) {
+                    this.activePackage.unbox(false);
+                }
                 this.packageContainer.remove(this.activePackage.group);
                 this.activePackage = nextPackage;
+                if (this.activePackage.isUnboxed) {
+                    this.activePackage.unbox(false);
+                }
                 this.activePackage.group.scale.set(0.001, 0.001, 0.001);
                 this.packageContainer.add(this.activePackage.group);
                 gsap.to(this.activePackage.group.scale, {
                     x: 1, y: 1, z: 1,
-                    duration: 0.6,
+                    duration: 0.55,
                     ease: 'back.out(1.6)'
                 });
             }
@@ -136,10 +144,13 @@ export class Studio {
 
     resetCamera() {
         gsap.to(this.camera.position, {
-            x: 0, y: 3.8, z: 6.8,
+            x: 1.4, y: 2.6, z: 6.0,
             duration: 1.0,
             ease: 'power2.inOut',
-            onUpdate: () => this.controls.update()
+            onUpdate: () => {
+                this.controls.target.set(0, 0.35, 0);
+                this.controls.update();
+            }
         });
     }
 
